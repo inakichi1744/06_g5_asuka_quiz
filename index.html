@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏯 飛鳥時代クイズ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+:root {
+  --primary: #5c4a1e;
+  --primary-light: #a07c3a;
+  --primary-dark: #3a2e10;
+  --accent: #7a1e1e;
+  --gold: #c8a000;
+  --gold-dark: #8a6e00;
+  --parchment: #fdf8ed;
+  --parchment2: #f0e4c0;
+  --ink: #1e150a;
+  --success: #2e7d32;
+  --danger: #c62828;
+  --shadow: 0 4px 24px rgba(58,46,16,0.2);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: #120c02;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 48px;
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(92,74,30,0.45) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 80%, rgba(122,30,30,0.2) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(160,124,58,0.03) 44px, rgba(160,124,58,0.03) 45px),
+    #120c02;
+  pointer-events: none; z-index: 0;
+}
+
+#hud {
+  position: sticky; top: 0; z-index: 100;
+  width: 100%; max-width: 540px;
+  background: linear-gradient(135deg, #120c02 0%, #251a06 100%);
+  border-bottom: 2px solid var(--primary);
+  padding: 10px 16px 8px; display: none;
+}
+.hud-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.hud-level { font-family:'Kaisei Decol',serif; font-size:0.95rem; color:var(--primary-light); font-weight:700; }
+.hud-title-badge { font-size:0.7rem; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; padding:2px 10px; border-radius:999px; font-weight:700; }
+.hud-score-chips { display:flex; gap:8px; }
+.hud-chip { font-size:0.78rem; font-weight:700; padding:2px 10px; border-radius:999px; }
+.hud-chip.ok { background:rgba(46,125,50,0.25); color:#81c784; }
+.hud-chip.ng { background:rgba(198,40,40,0.25); color:#ef9a9a; }
+.exp-bar-wrap { display:flex; align-items:center; gap:8px; }
+.exp-label { font-size:0.7rem; color:var(--primary-light); white-space:nowrap; }
+.exp-bar-bg { flex:1; height:8px; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden; }
+.exp-bar-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--primary-light)); border-radius:999px; transition:width 0.6s cubic-bezier(.4,0,.2,1); }
+
+#levelup-overlay {
+  display:none; position:fixed; inset:0; z-index:999;
+  background:rgba(18,12,2,0.9);
+  align-items:center; justify-content:center; flex-direction:column; text-align:center;
+}
+#levelup-overlay.show { display:flex; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+.levelup-ring {
+  width:160px; height:160px; border-radius:50%;
+  background:radial-gradient(circle,rgba(160,124,58,0.3) 0%,transparent 70%);
+  display:flex; align-items:center; justify-content:center; margin-bottom:20px;
+  animation:ringPulse 1s ease-in-out infinite;
+}
+@keyframes ringPulse { 0%,100%{box-shadow:0 0 0 0 rgba(160,124,58,0.4);}50%{box-shadow:0 0 0 20px rgba(160,124,58,0);} }
+.levelup-emoji { font-size:5rem; }
+.levelup-text { font-family:'Kaisei Decol',serif; color:var(--primary-light); font-size:2rem; font-weight:700; text-shadow:0 0 20px rgba(160,124,58,0.8); margin-bottom:8px; }
+.levelup-level { font-size:1rem; color:#c49a5a; margin-bottom:12px; }
+.levelup-title { font-size:1.1rem; color:var(--primary-light); background:rgba(160,124,58,0.1); border:1px solid rgba(160,124,58,0.3); padding:8px 24px; border-radius:999px; margin-bottom:24px; }
+.btn-levelup-ok { padding:12px 40px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:6px; font-size:1rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+
+#title-overlay {
+  display:none; position:fixed; inset:0; z-index:998;
+  background:rgba(18,12,2,0.92);
+  align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:24px;
+}
+#title-overlay.show { display:flex; animation:fadeIn 0.4s ease; }
+.title-scroll { background:var(--parchment); border:3px solid var(--primary); border-radius:8px; padding:32px 28px; max-width:320px; width:100%; }
+.title-scroll::before { content:'✦ ✦ ✦'; font-size:0.7rem; color:var(--primary); letter-spacing:6px; display:block; margin-bottom:16px; }
+.title-new { font-size:0.75rem; color:var(--danger); font-weight:700; letter-spacing:0.1em; }
+.title-main { font-family:'Kaisei Decol',serif; font-size:1.8rem; color:var(--ink); margin:8px 0; }
+.title-emoji { font-size:2.5rem; margin:8px 0; }
+.title-desc { font-size:0.85rem; color:#5a3a1a; line-height:1.6; margin-top:8px; }
+.btn-title-ok { margin-top:20px; padding:10px 32px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:6px; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+
+#intro-screen { width:100%; display:flex; flex-direction:column; align-items:center; padding:48px 16px 60px; position:relative; z-index:1; }
+.intro-emblem { font-size:5rem; margin-bottom:8px; filter:drop-shadow(0 4px 16px rgba(160,124,58,0.5)); animation:float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);} }
+.intro-title { font-family:'Kaisei Decol',serif; font-size:1.8rem; color:var(--primary-light); text-shadow:0 2px 12px rgba(160,124,58,0.4); margin-bottom:4px; text-align:center; }
+.intro-sub { color:#c49a5a; font-size:0.85rem; margin-bottom:28px; text-align:center; }
+.intro-card { width:100%; max-width:340px; background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:20px; margin-bottom:28px; text-align:center; }
+.intro-tags { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:16px; }
+.itag { padding:4px 12px; border-radius:999px; font-size:0.78rem; font-weight:700; background:rgba(92,74,30,0.12); color:var(--primary-dark); border:1px solid rgba(92,74,30,0.25); }
+.intro-desc { font-size:0.88rem; color:#5a3a1a; line-height:1.8; }
+.btn-start { padding:16px 48px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:8px; font-family:'Kaisei Decol',serif; font-size:1.2rem; font-weight:700; cursor:pointer; box-shadow:0 4px 20px rgba(160,124,58,0.4); transition:all 0.2s; letter-spacing:0.05em; }
+.btn-start:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(160,124,58,0.5); }
+
+#quiz-screen { display:none; width:100%; max-width:540px; padding:16px 0 0; position:relative; z-index:1; }
+.section-badge { display:inline-block; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; font-size:0.7rem; font-weight:700; padding:3px 14px; border-radius:999px; margin-bottom:8px; letter-spacing:0.05em; }
+.q-card { background:var(--parchment); border-radius:6px; padding:28px 20px 20px; box-shadow:var(--shadow),inset 0 0 0 1px rgba(92,74,30,0.18); border-top:3px solid var(--primary); margin:0 16px; animation:cardIn 0.35s cubic-bezier(.4,0,.2,1); }
+@keyframes cardIn { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+.q-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.q-num { font-size:0.75rem; color:var(--primary); }
+.q-type-badge { font-size:0.68rem; padding:2px 8px; border-radius:999px; font-weight:700; }
+.q-type-badge.choice { background:#fff8e1; color:var(--gold-dark); }
+.q-type-badge.text   { background:var(--parchment2); color:var(--primary-dark); }
+.q-text { font-family:'Kaisei Decol',serif; font-size:1.05rem; line-height:1.7; color:var(--ink); margin-bottom:18px; }
+
+.choices { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.choice-btn { width:100%; padding:12px 16px; border:2px solid rgba(92,74,30,0.2); border-radius:6px; background:white; font-size:0.93rem; text-align:left; cursor:pointer; transition:all 0.2s; font-family:'Noto Sans JP',sans-serif; color:var(--ink); position:relative; }
+.choice-btn:hover:not(:disabled) { border-color:var(--primary); background:var(--parchment2); transform:translateX(4px); }
+.choice-btn.correct  { border-color:var(--success); background:#e8f5e9; color:#1b5e20; font-weight:700; }
+.choice-btn.wrong    { border-color:var(--danger);  background:#ffebee; color:#b71c1c; font-weight:700; }
+.choice-btn.show-ans { border-color:var(--success); background:#e8f5e9; color:#1b5e20; }
+.choice-btn:disabled { cursor:default; }
+.c-icon { position:absolute; right:12px; top:50%; transform:translateY(-50%); }
+
+.text-input-area { margin-bottom:10px; }
+.text-input-area input { width:100%; padding:12px 14px; border:2px solid rgba(92,74,30,0.22); border-radius:6px; font-size:1rem; font-family:'Noto Sans JP',sans-serif; outline:none; background:white; transition:border-color 0.2s; color:var(--ink); }
+.text-input-area input:focus { border-color:var(--primary); }
+.text-input-area input.correct { border-color:var(--success); background:#e8f5e9; }
+.text-input-area input.wrong   { border-color:var(--danger);  background:#ffebee; }
+
+.hint-row { margin:6px 0; }
+.hint-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 14px; background:rgba(200,160,0,0.1); border:1.5px dashed var(--gold-dark); border-radius:999px; font-size:0.78rem; color:#7a6000; cursor:pointer; font-family:'Noto Sans JP',sans-serif; font-weight:700; transition:background 0.2s; }
+.hint-btn:hover { background:rgba(200,160,0,0.2); }
+.hint-btn:disabled { opacity:0.5; cursor:default; }
+.hint-box { display:none; margin-top:6px; padding:8px 12px; background:rgba(200,160,0,0.08); border-left:3px solid var(--gold-dark); border-radius:4px; font-size:0.8rem; color:#7a6000; }
+.hint-box.show { display:block; animation:slideIn 0.2s ease; }
+
+.feedback { display:none; padding:12px 14px; border-radius:6px; margin-bottom:12px; font-size:0.88rem; line-height:1.65; animation:slideIn 0.3s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+.feedback.correct { background:#e8f5e9; color:#1b5e20; border-left:4px solid var(--success); }
+.feedback.wrong   { background:#ffebee; color:#b71c1c; border-left:4px solid var(--danger); }
+.feedback.show { display:block; }
+.fb-title { font-weight:700; font-size:0.95rem; margin-bottom:4px; }
+.fb-exp { font-size:0.8rem; margin-top:4px; }
+.fb-explain { font-size:0.83rem; color:#555; margin-top:6px; line-height:1.6; }
+
+.btn { width:100%; padding:13px; border:none; border-radius:6px; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:all 0.2s; }
+.btn-primary { background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; box-shadow:0 3px 12px rgba(160,124,58,0.3); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(160,124,58,0.4); }
+.btn-secondary { background:linear-gradient(135deg,#5d1a1a,var(--accent)); color:white; }
+.btn:disabled { opacity:0.6; cursor:default; transform:none !important; }
+
+#result-screen { display:none; width:100%; max-width:540px; padding:40px 16px 60px; position:relative; z-index:1; text-align:center; }
+.result-emblem { font-size:4rem; margin-bottom:12px; }
+.result-title { font-family:'Kaisei Decol',serif; font-size:1.5rem; color:var(--primary-light); margin-bottom:4px; }
+.result-title-display { display:inline-block; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; font-size:0.9rem; font-weight:700; padding:4px 16px; border-radius:999px; margin-bottom:16px; }
+.result-card { background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:20px; margin-bottom:16px; }
+.result-score { font-family:'Kaisei Decol',serif; font-size:3rem; color:var(--ink); font-weight:700; }
+.result-score span { font-size:1rem; color:var(--primary); font-weight:400; }
+.result-level-row { display:flex; align-items:center; justify-content:center; gap:16px; margin:12px 0; flex-wrap:wrap; }
+.rl-item { text-align:center; }
+.rl-label { font-size:0.7rem; color:var(--primary); }
+.rl-val { font-size:1.2rem; font-weight:700; color:var(--ink); }
+.result-msg { font-size:0.9rem; color:#5a3a1a; line-height:1.7; margin:12px 0; }
+.result-table { width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left; margin-top:12px; }
+.result-table th { background:rgba(92,74,30,0.1); padding:7px 10px; color:#5a3a1a; font-weight:700; }
+.result-table td { padding:7px 10px; border-bottom:1px solid rgba(92,74,30,0.1); }
+.result-table .ok  { color:var(--success); font-weight:700; }
+.result-table .bad { color:var(--danger);  font-weight:700; }
+.title-collection { background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:16px; margin-bottom:16px; }
+.tc-header { font-family:'Kaisei Decol',serif; font-size:1rem; color:var(--ink); margin-bottom:10px; }
+.tc-grid { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.tc-badge { padding:4px 12px; border-radius:999px; font-size:0.78rem; font-weight:700; }
+.tc-badge.earned { background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; }
+.tc-badge.locked { background:rgba(92,74,30,0.1); color:#b09060; border:1px dashed rgba(92,74,30,0.25); }
+.stars { font-size:1.8rem; letter-spacing:4px; margin:8px 0; }
+.result-btns { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+</style>
+</head>
+<body>
+
+<div id="levelup-overlay">
+  <div class="levelup-ring"><div class="levelup-emoji">🏯</div></div>
+  <div class="levelup-text">LEVEL UP！</div>
+  <div class="levelup-level" id="lu-level">Lv.2 になった！</div>
+  <div class="levelup-title" id="lu-title"></div>
+  <button class="btn-levelup-ok" onclick="closeLevelup()">よし！続けるぞ ▶</button>
+</div>
+
+<div id="title-overlay">
+  <div class="title-scroll">
+    <div class="title-new">🎊 称号獲得！</div>
+    <div class="title-emoji" id="to-emoji">🏯</div>
+    <div class="title-main" id="to-title"></div>
+    <div class="title-desc" id="to-desc"></div>
+    <button class="btn-title-ok" onclick="closeTitleOverlay()">受け取る！</button>
+  </div>
+</div>
+
+<div id="intro-screen">
+  <div style="height:40px"></div>
+  <div class="intro-emblem">🏯</div>
+  <div class="intro-title">飛鳥時代<br>クイズ</div>
+  <div class="intro-sub">３月の演習から出題！</div>
+  <div class="intro-card">
+    <div class="intro-tags">
+      <span class="itag">🎯 全19問</span>
+      <span class="itag">⏱ 約5分</span>
+      <span class="itag">📚 小5 社会</span>
+    </div>
+    <div class="intro-desc">
+      経験値を手に入れてレベルアップ！<br>
+      全ての称号を手に入れよう！
+    </div>
+  </div>
+  <button class="btn-start" onclick="startQuiz()">スタート！ 🚀</button>
+</div>
+
+<div id="quiz-screen">
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-level" id="hud-level">📜 Lv.1 飛鳥の民</div>
+      <div class="hud-score-chips">
+        <div class="hud-chip ok">✅ <span id="hud-ok">0</span></div>
+        <div class="hud-chip ng">❌ <span id="hud-ng">0</span></div>
+      </div>
+    </div>
+    <div class="exp-bar-wrap">
+      <div class="exp-label" id="exp-text">EXP 0/50</div>
+      <div class="exp-bar-bg"><div class="exp-bar-fill" id="exp-fill" style="width:0%"></div></div>
+      <div class="hud-title-badge" id="hud-title-badge">飛鳥の民</div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div style="padding:0 16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:999px;overflow:hidden;">
+        <div id="prog-fill" style="height:100%;background:linear-gradient(90deg,var(--primary-dark),var(--primary-light));border-radius:999px;transition:width 0.5s;width:0%"></div>
+      </div>
+      <div style="font-size:0.75rem;color:var(--primary-light);white-space:nowrap;" id="prog-label">0/20</div>
+    </div>
+  </div>
+
+  <div class="q-card" id="q-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <span class="section-badge" id="q-section">大問1</span>
+      <div class="q-meta" style="margin-bottom:0;flex:1;">
+        <span class="q-num" id="q-num">問1 / 20</span>
+        <span class="q-type-badge" id="q-type-badge">選択</span>
+      </div>
+    </div>
+    <div class="q-text" id="q-text"></div>
+    <div id="choices-wrap"></div>
+    <div id="text-input-wrap" style="display:none">
+      <div class="text-input-area">
+        <input type="text" id="text-ans" placeholder="答えを入力…" autocomplete="off">
+      </div>
+      <div class="hint-row">
+        <button class="hint-btn" id="hint-btn" onclick="showHint()">💡 ヒントを見る</button>
+        <div class="hint-box" id="hint-box"></div>
+      </div>
+      <button class="btn btn-secondary" id="submit-btn" onclick="submitText()" style="margin-bottom:10px;">答え合わせ ✔</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" style="display:none;">次の問題へ →</button>
+  </div>
+  <div style="height:32px"></div>
+</div>
+
+<div id="result-screen">
+  <div class="result-emblem" id="res-emoji">🏆</div>
+  <div class="result-title">クイズ完了！</div>
+  <div class="stars" id="res-stars">⭐⭐⭐</div>
+  <div class="result-title-display" id="res-title-disp">👑 古墳大王</div>
+  <div class="result-card">
+    <div class="result-score" id="res-score">0<span> / 20問正解</span></div>
+    <div class="result-level-row">
+      <div class="rl-item"><div class="rl-label">最終レベル</div><div class="rl-val" id="res-level">Lv.1</div></div>
+      <div class="rl-item"><div class="rl-label">獲得EXP</div><div class="rl-val" id="res-exp">0</div></div>
+      <div class="rl-item"><div class="rl-label">正答率</div><div class="rl-val" id="res-pct">0%</div></div>
+    </div>
+    <div class="result-msg" id="res-msg"></div>
+  </div>
+  <div class="title-collection">
+    <div class="tc-header">📜 称号コレクション</div>
+    <div class="tc-grid" id="tc-grid"></div>
+  </div>
+  <div class="result-card">
+    <table class="result-table">
+      <thead><tr><th>#</th><th>問題</th><th>結果</th></tr></thead>
+      <tbody id="res-tbody"></tbody>
+    </table>
+  </div>
+  <div class="result-btns">
+    <button class="btn btn-primary" onclick="restartQuiz()">もう一度やる 🔄</button>
+    <button class="btn btn-secondary" onclick="reviewWrong()" id="review-btn">❌ 間違えた問題だけやる</button>
+  </div>
+</div>
+
+<script>
+const LEVELS = [
+  { lv:1, need:0,   title:'飛鳥の民',     emoji:'📜' },
+  { lv:2, need:30,  title:'遣隋使見習い', emoji:'🚢' },
+  { lv:3, need:80,  title:'仏教の徒',     emoji:'🛕' },
+  { lv:4, need:150, title:'冠位の士',     emoji:'🎖️' },
+  { lv:5, need:250, title:'憲法の賢者',   emoji:'📋' },
+  { lv:6, need:380, title:'摂政の補佐',   emoji:'🏯' },
+  { lv:7, need:550, title:'聖徳太子',     emoji:'👑' },
+];
+
+const TITLES = [
+  { id:'start',    emoji:'📜', name:'飛鳥の民',   desc:'クイズに挑戦した！',        cond:(r,c,w)=>true },
+  { id:'noerror',  emoji:'🏹', name:'無傷の官人', desc:'1問もミスせずにクリア！',   cond:(r,c,w)=>w===0 && r.length===r.filter(x=>x).length },
+  { id:'half',     emoji:'🛕', name:'仏法の達人', desc:'半分以上正解した！',        cond:(r,c,w)=>c>=Math.ceil(r.length/2) },
+  { id:'speed',    emoji:'⚡', name:'知の探求者', desc:'15問以上正解した！',        cond:(r,c,w)=>c>=15 },
+  { id:'allclear', emoji:'👑', name:'聖徳太子',   desc:'全問正解！最高の称号！',    cond:(r,c,w)=>w===0 && c===r.length },
+];
+
+let exp=0, currentLevel=1, earnedTitles=[];
+
+function getLevel(e){ let lv=LEVELS[0]; for(const l of LEVELS){ if(e>=l.need) lv=l; } return lv; }
+function addExp(amount){
+  const prev=getLevel(exp); exp+=amount; const next=getLevel(exp); updateHUD();
+  if(next.lv>prev.lv){ showLevelup(next); return true; } return false;
+}
+function updateHUD(){
+  const lv=getLevel(exp); const nextLv=LEVELS.find(l=>l.lv===lv.lv+1);
+  const expInLv=exp-lv.need; const expNeeded=nextLv?nextLv.need-lv.need:999;
+  const pct=nextLv?Math.min((expInLv/expNeeded)*100,100):100;
+  document.getElementById('hud-level').textContent=`${lv.emoji} Lv.${lv.lv} ${lv.title}`;
+  document.getElementById('hud-title-badge').textContent=lv.title;
+  document.getElementById('exp-fill').style.width=pct+'%';
+  document.getElementById('exp-text').textContent=nextLv?`EXP ${expInLv}/${expNeeded}`:'MAX';
+  currentLevel=lv.lv;
+}
+function showLevelup(lv){
+  document.getElementById('lu-level').textContent=`Lv.${lv.lv} になった！`;
+  document.getElementById('lu-title').textContent=`${lv.emoji} 称号「${lv.title}」を獲得！`;
+  document.getElementById('levelup-overlay').classList.add('show');
+}
+function closeLevelup(){ document.getElementById('levelup-overlay').classList.remove('show'); }
+let titleCallback=null;
+function showTitleOverlay(t,cb){
+  document.getElementById('to-emoji').textContent=t.emoji;
+  document.getElementById('to-title').textContent=t.name;
+  document.getElementById('to-desc').textContent=t.desc;
+  document.getElementById('title-overlay').classList.add('show');
+  titleCallback=cb||null;
+}
+function closeTitleOverlay(){
+  document.getElementById('title-overlay').classList.remove('show');
+  if(titleCallback){ titleCallback(); titleCallback=null; }
+}
+
+const ALL_QUESTIONS = [
+  // 大問1
+  { id:1, section:'大問1', type:'text',
+    text:'日本で初めての女性天皇は誰ですか？',
+    answer:'推古天皇',
+    hint:'飛鳥時代に即位した女性天皇。聖徳太子のおばにあたる',
+    explanation:'推古天皇（すいこてんのう）は日本で初めての女性天皇です。6世紀末に即位し、おいの聖徳太子（しょうとくたいし）を摂政（せっしょう）に任命して、天皇中心の国づくりを進めました。', exp:10 },
+  { id:2, section:'大問1', type:'text',
+    text:'推古天皇のおいである聖徳太子が、天皇を助ける役職を何といいますか？',
+    answer:'摂政',
+    hint:'天皇に代わって政治を行う役職',
+    explanation:'摂政（せっしょう）は天皇が幼いときや女性のときに、代わりに政治を行う役職です。聖徳太子は推古天皇の摂政として、蘇我馬子（そがのうまこ）とともに天皇中心の国づくりを進めました。', exp:10 },
+  { id:3, section:'大問1', type:'text',
+    text:'聖徳太子とともに政治を行った人物の一族の名前は何といいますか？',
+    answer:'蘇我氏',
+    hint:'飛鳥時代に強い力を持った豪族の一族',
+    explanation:'蘇我氏（そがし）は飛鳥時代に大きな力を持った豪族（ごうぞく）です。蘇我馬子（うまこ）・蘇我蝦夷（えみし）・蘇我入鹿（いるか）と続きましたが、645年に中大兄皇子（なかのおおえのおうじ）らによって滅ぼされました（大化の改新）。', exp:10 },
+  { id:4, section:'大問1', type:'text',
+    text:'蘇我氏の一族が栄え、中国から日本に様々な知識や技術を伝えた人々を何といいますか？',
+    answer:'渡来人',
+    hint:'海を渡って来た人々',
+    explanation:'渡来人（とらいじん）は中国や朝鮮半島から日本に移り住んだ人々です。漢字・仏教・機織り・須恵器（すえき）などの技術を伝え、飛鳥時代の文化や政治の発展に大きく貢献しました。', exp:8 },
+  { id:5, section:'大問1', type:'text',
+    text:'渡来人がもたらし、蘇我氏が導入を進めた宗教を何といいますか？',
+    answer:'仏教',
+    hint:'お寺・仏像と関係が深い宗教',
+    explanation:'仏教（ぶっきょう）は6世紀に百済（くだら）から伝わりました。蘇我氏は仏教の導入を積極的に推進し、聖徳太子も仏教を大切にしました。法隆寺（ほうりゅうじ）などの寺院がこの時代に建てられました。', exp:8 },
+  { id:6, section:'大問1', type:'text',
+    text:'この時代につくられた、世界最古の木造建築として世界文化遺産に登録されている寺院を何といいますか？',
+    answer:'法隆寺',
+    hint:'奈良県にある、聖徳太子ゆかりの寺院',
+    explanation:'法隆寺（ほうりゅうじ）は奈良県斑鳩町（いかるがちょう）にある寺院で、聖徳太子が建立したとされています。世界最古の木造建築物として知られており、1993年に世界文化遺産に登録されました。', exp:10 },
+
+  // 大問2
+  { id:7, section:'大問2', type:'text',
+    text:'6世紀の末から8世紀の初めにかけて、天皇を中心とした国づくりを主導した人物の名前を漢字で答えなさい。',
+    answer:'蘇我馬子',
+    hint:'蘇我氏の代表的な人物。聖徳太子とともに国づくりを進めた',
+    explanation:'蘇我馬子（そがのうまこ）は飛鳥時代の有力な豪族で、推古天皇・聖徳太子とともに天皇中心の国づくりを進めました。仏教の普及にも積極的で、飛鳥寺（あすかでら）を建立しました。', exp:10 },
+  { id:8, section:'大問2', type:'choice',
+    text:'冠位十二階（かんいじゅうにかい）はどのような制度ですか？正しいものを選びなさい。',
+    choices:[
+      '家柄ではなく、個人の能力で役人を選ぼうとした',
+      '天皇の命令を絶対とし、逆らえないようにした',
+      '外国の進んだ文化を取り入れるための制度',
+      '役人の給料を定めた制度',
+    ],
+    answer:'家柄ではなく、個人の能力で役人を選ぼうとした',
+    explanation:'冠位十二階（かんいじゅうにかい）は603年に聖徳太子が定めた制度です。それまでは生まれた家柄（かがら）によって役人の地位が決まっていましたが、この制度では個人の能力や功績（こうせき）によって役人を選ぶようにしました。冠の色で位（くらい）を12段階に分けました。', exp:10 },
+  { id:9, section:'大問2', type:'choice',
+    text:'十七条の憲法（じゅうしちじょうのけんぽう）はどのような内容の制度ですか？正しいものを選びなさい。',
+    choices:[
+      '役人の心得を示したもの',
+      '家柄ではなく、個人の能力で役人を選ぼうとした',
+      '農民への税のかけ方を定めたもの',
+      '軍隊の決まりを定めたもの',
+    ],
+    answer:'役人の心得を示したもの',
+    explanation:'十七条の憲法（じゅうしちじょうのけんぽう）は604年に聖徳太子が定めた役人の心得（こころえ）です。「和を以て貴しとなす」（なかよくすることが大切）など、天皇の命令に従い、仏教を敬い、役人として正しく行動することを求めました。なお「家柄ではなく能力で役人を選ぶ」制度は冠位十二階（かんいじゅうにかい）のことです。', exp:10 },
+  { id:10, section:'大問2', type:'choice',
+    text:'飛鳥文化を代表する寺院はどれですか？',
+    choices:['法隆寺（ほうりゅうじ）','東大寺（とうだいじ）','金閣寺（きんかくじ）','平等院（びょうどういん）'],
+    answer:'法隆寺（ほうりゅうじ）',
+    explanation:'法隆寺（ほうりゅうじ）は飛鳥文化を代表する寺院で、聖徳太子が建立したとされています。奈良県にあり、世界最古の木造建築として1993年にユネスコの世界文化遺産に登録されました。東大寺は奈良時代、金閣寺・平等院は平安〜室町時代の建物です。', exp:8 },
+
+  // 大問3
+  { id:11, section:'大問3', type:'text',
+    text:'聖徳太子が使者を送った、当時の中国の国名を答えなさい。',
+    answer:'隋',
+    hint:'読み方は「ずい」。7世紀初めの中国の統一王朝',
+    explanation:'隋（ずい）は589年に中国を統一した王朝です。聖徳太子は607年に小野妹子（おののいもこ）を遣隋使（けんずいし）として隋に派遣し、進んだ制度や文化を学ぼうとしました。「日出づる処の天子、書を日没する処の天子に致す」という手紙を送ったことでも有名です。', exp:10 },
+  { id:12, section:'大問3', type:'text',
+    text:'聖徳太子が隋に派遣した使者の名前を漢字で答えなさい。',
+    answer:'小野妹子',
+    hint:'読み方は「おののいもこ」',
+    explanation:'小野妹子（おののいもこ）は607年に遣隋使（けんずいし）として隋に派遣された人物です。隋の皇帝・煬帝（ようだい）に聖徳太子の手紙を届けました。「日出づる処の天子…」という書き出しの手紙は、日本が中国と対等な立場で外交しようとした意思を示しています。', exp:10 },
+  { id:13, section:'大問3', type:'text',
+    text:'聖徳太子が隋に送った使者のことを何といいますか？',
+    answer:'遣隋使',
+    hint:'「隋に遣わした使者」という意味',
+    explanation:'遣隋使（けんずいし）は日本から隋（中国）に派遣された使節（しせつ）のことです。進んだ制度・文化・仏教などを学ぶために送られ、隋から帰国した留学生たちはのちの政治改革に大きく貢献しました。', exp:10 },
+  { id:14, section:'大問3', type:'choice',
+    text:'聖徳太子が「日出づる処の天子から日没する処の天子へ」と書いた手紙を受け取り、怒ったとされる隋の皇帝は誰ですか？',
+    choices:['始皇帝（しこうてい）','武帝（ぶてい）','煬帝（ようだい）','天智天皇（てんじてんのう）'],
+    answer:'煬帝（ようだい）',
+    explanation:'煬帝（ようだい）は隋の第2代皇帝です。日本からの手紙に「天子」という言葉が使われ、中国と対等な立場を主張していたため怒ったとされています。しかし当時、隋は高句麗（こうくり）との戦争を抱えており、日本とも関係を保つ必要があったため、外交は続けられました。なお始皇帝は秦（しん）、武帝は漢（かん）の皇帝で、天智天皇は日本の天皇です。', exp:10 },
+  { id:15, section:'大問3', type:'choice',
+    text:'聖徳太子が日本と隋の対等な関係を保とうとした理由として正しいものを選びなさい。',
+    choices:[
+      '日本と2国が仲良くなることを望んでいたから',
+      '聖徳太子が送った書面の内容が中国の皇帝を非常に喜ばせるものだったから',
+      '当時の東アジアでは中国が全体を支配しようとしており、日本はその仕組みに組み込まれないよう対等な関係を目指したから',
+      '日本には中国よりも優れた軍事力があることを知らせ勝ち目がないと判断したから',
+    ],
+    answer:'当時の東アジアでは中国が全体を支配しようとしており、日本はその仕組みに組み込まれないよう対等な関係を目指したから',
+    explanation:'当時の中国（隋）は東アジア全体を自分の支配下に置こうとしていました。朝鮮半島の国々も中国との朝貢関係（ちょうこうかんけい）に組み込まれていました。聖徳太子はこのような状況の中で、日本が中国に従属（じゅうぞく）しない対等な立場を保つために、あえて「天子」という言葉を使って外交しようとしたのです。', exp:10 },
+
+  // 大問4（冠位十二階・十七条の憲法の詳細）
+  { id:16, section:'大問4', type:'text',
+    text:'聖徳太子が603年に定めた、個人の能力で役人を選ぶ制度を何といいますか？',
+    answer:'冠位十二階',
+    hint:'冠（かんむり）の色で12段階の位を示した制度',
+    explanation:'冠位十二階（かんいじゅうにかい）は603年に聖徳太子が定めた制度です。徳・仁・礼・信・義・智の6つを大小に分けた12段階の位があり、冠の色でその人の位がわかるようになっていました。家柄に関係なく能力や功績で役人を選ぶ画期的な制度でした。', exp:10 },
+  { id:17, section:'大問4', type:'text',
+    text:'聖徳太子が604年に定めた、役人の心得を示したものを何といいますか？',
+    answer:'十七条の憲法',
+    hint:'17か条からなる役人の決まり',
+    explanation:'十七条の憲法（じゅうしちじょうのけんぽう）は604年に聖徳太子が定めた役人の心得です。第1条「和を以て貴しとなす」（仲良くすることを大切にしなさい）、第2条「篤く三宝を敬え」（仏教を大切にしなさい）などが有名です。天皇の命令に従うことも強調されています。', exp:10 },
+
+  // 大問5（外交・留学生）
+  { id:18, section:'大問5', type:'choice',
+    text:'聖徳太子が目指した外交の方針として正しいものを選びなさい。',
+    choices:[
+      '外国の進んだ制度や文化を取り入れ、外国と対等な立場での外交を求めた',
+      '外国との交流を一切断ち、日本独自の文化を守ろうとした',
+      '中国に服従して援助を受けようとした',
+      '朝鮮半島の支配を目指した',
+    ],
+    answer:'外国の進んだ制度や文化を取り入れ、外国と対等な立場での外交を求めた',
+    explanation:'聖徳太子は外国（特に隋）の進んだ制度・文化・仏教などを積極的に取り入れながら、中国と対等な立場での外交を目指しました。遣隋使を派遣して留学生や留学僧も送り、帰国した人々がのちの政治改革に貢献しました。', exp:8 },
+  { id:19, section:'大問5', type:'choice',
+    text:'当時の隋（中国）が東アジアで行っていたこととして正しいものを選びなさい。',
+    choices:[
+      '周辺の国を中国中心の仕組みに組み込もうとしていた',
+      '周辺の国々と対等な関係を結ぼうとしていた',
+      '日本に援助を求めていた',
+      '仏教の普及のみを目的としていた',
+    ],
+    answer:'周辺の国を中国中心の仕組みに組み込もうとしていた',
+    explanation:'当時の中国（隋）は東アジア全体を自国中心の秩序（ちつじょ）に組み込もうとしていました。朝鮮半島の国々（高句麗・百済・新羅）もその影響を受けていました。特に高句麗は中国の圧力に対して激しく抵抗しました。聖徳太子はこうした状況を踏まえて、日本の独立を守るための外交を考えていたのです。', exp:8 },
+];
+
+let questions=[], currentIndex=0, correctCount=0, wrongCount=0, answered=false, results=[];
+
+function startQuiz(questionSet){
+  const isReview=!!questionSet;
+  questions=questionSet||[...ALL_QUESTIONS].sort(()=>Math.random()-0.5);
+  currentIndex=0; correctCount=0; wrongCount=0; results=[]; answered=false; exp=0;
+  if(!isReview) earnedTitles=[];
+  document.getElementById('intro-screen').style.display='none';
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('quiz-screen').style.display='block';
+  document.getElementById('hud').style.display='block';
+  updateHUD(); renderQuestion();
+  if(!isReview && !earnedTitles.includes(TITLES[0].id)){
+    setTimeout(()=>{ showTitleOverlay(TITLES[0]); earnedTitles.push(TITLES[0].id); },600);
+  }
+}
+
+function renderQuestion(){
+  const q=questions[currentIndex];
+  answered=false;
+  const card=document.getElementById('q-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  document.getElementById('q-section').textContent=q.section;
+  document.getElementById('q-num').textContent=`問${currentIndex+1} / ${questions.length}`;
+  document.getElementById('q-text').textContent=q.text;
+  const tb=document.getElementById('q-type-badge');
+  if(q.type==='choice'){ tb.textContent='選択'; tb.className='q-type-badge choice'; }
+  else{ tb.textContent='記述'; tb.className='q-type-badge text'; }
+  const fb=document.getElementById('feedback');
+  fb.className='feedback'; fb.innerHTML='';
+  document.getElementById('next-btn').style.display='none';
+  const choicesWrap=document.getElementById('choices-wrap');
+  const textWrap=document.getElementById('text-input-wrap');
+  choicesWrap.innerHTML=''; textWrap.style.display='none';
+  if(q.type==='choice'){
+    renderChoices(q,choicesWrap);
+  } else {
+    textWrap.style.display='block';
+    const input=document.getElementById('text-ans');
+    input.value=''; input.className=''; input.disabled=false;
+    const hintBtn=document.getElementById('hint-btn');
+    const hintBox=document.getElementById('hint-box');
+    hintBox.textContent=''; hintBox.classList.remove('show');
+    if(q.hint){ hintBtn.style.display=''; hintBtn.disabled=false; hintBtn.textContent='💡 ヒントを見る'; }
+    else{ hintBtn.style.display='none'; }
+    document.getElementById('submit-btn').disabled=false;
+    setTimeout(()=>input.focus(),100);
+    input.onkeydown=e=>{ if(e.key==='Enter') submitText(); };
+  }
+  updateProgress();
+}
+
+function renderChoices(q,wrap){
+  const div=document.createElement('div');
+  div.className='choices';
+  const list=q.ordered?[...q.choices]:[...q.choices].sort(()=>Math.random()-0.5);
+  list.forEach(ch=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn'; btn.textContent=ch;
+    btn.onclick=()=>selectChoice(btn,ch,q);
+    div.appendChild(btn);
+  });
+  wrap.appendChild(div);
+}
+
+function selectChoice(btn,choice,q){
+  if(answered) return;
+  answered=true;
+  const isCorrect=(choice===q.answer);
+  document.querySelectorAll('.choice-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===q.answer){ b.classList.add('show-ans'); b.innerHTML+=`<span class="c-icon">✅</span>`; }
+  });
+  if(!isCorrect){ btn.classList.remove('show-ans'); btn.classList.add('wrong'); btn.innerHTML=btn.textContent.replace('<span class="c-icon">✅</span>','')+`<span class="c-icon">❌</span>`; }
+  else{ btn.classList.add('correct'); }
+  processAnswer(isCorrect,choice,q);
+}
+
+function showHint(){
+  const q=questions[currentIndex];
+  const hb=document.getElementById('hint-box');
+  hb.textContent=`💡 ヒント：${q.hint}`; hb.classList.add('show');
+  document.getElementById('hint-btn').disabled=true;
+  document.getElementById('hint-btn').textContent='💡 ヒントを見た';
+}
+
+function submitText(){
+  if(answered) return;
+  const q=questions[currentIndex];
+  const input=document.getElementById('text-ans');
+  const userAns=input.value.trim();
+  if(!userAns){ input.style.borderColor='orange'; setTimeout(()=>input.style.borderColor='',600); return; }
+  answered=true;
+  document.getElementById('submit-btn').disabled=true;
+  input.disabled=true;
+  const norm=s=>s.replace(/\s|　/g,'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[Ａ-Ｚａ-ｚ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toLowerCase();
+  const correctList=Array.isArray(q.answers)?q.answers:[q.answer];
+  const isCorrect=correctList.some(a=>norm(userAns)===norm(a));
+  input.className=isCorrect?'correct':'wrong';
+  processAnswer(isCorrect,userAns,q);
+}
+
+function processAnswer(isCorrect,userAns,q){
+  if(isCorrect){ correctCount++; document.getElementById('hud-ok').textContent=correctCount; }
+  else{ wrongCount++; document.getElementById('hud-ng').textContent=wrongCount; }
+  results.push({q,isCorrect,userAnswer:userAns});
+  const gained=isCorrect?q.exp:Math.floor(q.exp*0.2);
+  addExp(gained);
+  showFeedback(isCorrect,q,gained);
+  document.getElementById('next-btn').style.display='block';
+}
+
+function showFeedback(isCorrect,q,gained){
+  const fb=document.getElementById('feedback');
+  fb.className='feedback '+(isCorrect?'correct':'wrong')+' show';
+  const correctList=Array.isArray(q.answers)?q.answers:[q.answer];
+  const answerDisp=correctList[0];
+  fb.innerHTML=`
+    <div class="fb-title">${isCorrect?'🎉 正解！':`❌ 不正解… 正解は「${answerDisp}」`}</div>
+    <div class="fb-exp">${isCorrect?`✨ +${gained} EXP 獲得！`:`💧 +${gained} EXP（参加ポイント）`}</div>
+    <div class="fb-explain">📖 ${q.explanation}</div>
+  `;
+}
+
+function nextQuestion(){
+  if(currentIndex+1>=questions.length) showResult();
+  else{ currentIndex++; renderQuestion(); }
+}
+
+function updateProgress(){
+  const pct=(currentIndex/questions.length)*100;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-label').textContent=`${currentIndex}/${questions.length}`;
+}
+
+function showResult(){
+  document.getElementById('quiz-screen').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('result-screen').style.display='block';
+  const total=questions.length; const pct=correctCount/total; const lv=getLevel(exp);
+  let emoji,stars,msg;
+  if(pct>=1.0)      { emoji='🏆'; stars='⭐⭐⭐'; msg='全問正解！完璧だ！聖徳太子の称号は伊達じゃない！✨'; }
+  else if(pct>=0.8) { emoji='😄'; stars='⭐⭐';   msg='よくできた！あと少しで満点。間違えた問題を確認しよう！'; }
+  else if(pct>=0.5) { emoji='😊'; stars='⭐';     msg='がんばった！半分以上正解。復習してもう一度挑戦！'; }
+  else              { emoji='💪'; stars='';        msg='まだ覚えていないところがあるね。一つずつ確認しよう！'; }
+  document.getElementById('res-emoji').textContent=emoji;
+  document.getElementById('res-stars').textContent=stars;
+  document.getElementById('res-score').innerHTML=`${correctCount}<span> / ${total}問正解</span>`;
+  document.getElementById('res-msg').textContent=msg;
+  document.getElementById('res-level').textContent=`Lv.${lv.lv}`;
+  document.getElementById('res-exp').textContent=exp;
+  document.getElementById('res-pct').textContent=Math.round(pct*100)+'%';
+
+  const newTitles=TITLES.filter(t=>t.id!=='start'&&!earnedTitles.includes(t.id)&&t.cond(results.map(r=>r.isCorrect),correctCount,wrongCount));
+  newTitles.forEach(t=>earnedTitles.push(t.id));
+  const topTitle=[...TITLES].reverse().find(t=>earnedTitles.includes(t.id))||TITLES[0];
+  document.getElementById('res-title-disp').textContent=`${topTitle.emoji} ${topTitle.name}`;
+
+  const grid=document.getElementById('tc-grid');
+  grid.innerHTML='';
+  TITLES.forEach(t=>{
+    const span=document.createElement('span');
+    span.className='tc-badge '+(earnedTitles.includes(t.id)?'earned':'locked');
+    span.textContent=earnedTitles.includes(t.id)?`${t.emoji} ${t.name}`:'🔒 ???';
+    span.title=earnedTitles.includes(t.id)?t.desc:'未獲得';
+    grid.appendChild(span);
+  });
+
+  const tbody=document.getElementById('res-tbody');
+  tbody.innerHTML='';
+  results.forEach((r,i)=>{
+    const shortQ=r.q.text.length>20?r.q.text.slice(0,20)+'…':r.q.text;
+    const correctDisp=Array.isArray(r.q.answers)?r.q.answers[0]:r.q.answer;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td>${shortQ}</td><td class="${r.isCorrect?'ok':'bad'}">${r.isCorrect?'✅ 正解':'❌ '+correctDisp}</td>`;
+    tbody.appendChild(tr);
+    if(!r.isCorrect){
+      const expTr=document.createElement('tr');
+      expTr.style.display='none';
+      expTr.innerHTML=`<td colspan="3" style="background:var(--parchment);padding:8px 12px;font-size:0.82rem;color:#5a3a1a;line-height:1.6;border-left:3px solid var(--primary);">📖 ${r.q.explanation}</td>`;
+      tbody.appendChild(expTr);
+      const btnTr=document.createElement('tr');
+      btnTr.innerHTML=`<td colspan="3" style="padding:4px 12px 8px;background:#ffebee;"><button style="font-size:0.78rem;padding:4px 14px;border:1.5px solid var(--gold-dark);border-radius:999px;background:#fffde7;color:#7a6000;cursor:pointer;font-family:inherit;font-weight:700;">💡 解説を見る</button></td>`;
+      tbody.appendChild(btnTr);
+      btnTr.querySelector('button')._expTr=expTr;
+      btnTr.querySelector('button').onclick=function(){ toggleExp(this); };
+    }
+  });
+  document.getElementById('review-btn').style.display=results.some(r=>!r.isCorrect)?'block':'none';
+  if(newTitles.length>0){ setTimeout(()=>{ showTitleOverlay(newTitles[0]); },800); }
+}
+
+function toggleExp(btn){
+  const expTr=btn._expTr;
+  const isShown=expTr.style.display!=='none';
+  expTr.style.display=isShown?'none':'table-row';
+  btn.textContent=isShown?'💡 解説を見る':'💡 解説を閉じる';
+}
+
+function restartQuiz(){
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('intro-screen').style.display='flex';
+  document.getElementById('intro-screen').style.flexDirection='column';
+  document.getElementById('intro-screen').style.alignItems='center';
+}
+
+function reviewWrong(){
+  const wrong=results.filter(r=>!r.isCorrect).map(r=>r.q);
+  if(wrong.length>0) startQuiz(wrong);
+}
+</script>
+</body>
+</html>
