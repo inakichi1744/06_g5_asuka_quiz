@@ -12,4 +12,4 @@
 - レベルアップや称号を集めながら、楽しく復習できます。
 - 間違えた問題だけをやり直す「復習モード」つき。
 
-▶ 遊ぶ: https://inakichi1744.github.io/07_g5_asuka_quiz/
+▶ 遊ぶ: https://inakichi1744.github.io/06_g5_asuka_quiz/
