@@ -420,7 +420,7 @@ const ALL_QUESTIONS = [
     hint:'お寺・仏像と関係が深い宗教',
     explanation:'仏教（ぶっきょう）は6世紀に百済（くだら）から伝わりました。蘇我氏は仏教の導入を積極的に推進し、聖徳太子も仏教を大切にしました。法隆寺（ほうりゅうじ）などの寺院がこの時代に建てられました。', exp:8 },
   { id:6, section:'大問1', type:'text',
-    text:'この時代につくられた、世界最古の木造建築として世界文化遺産に登録されている寺院を何といいますか？',
+    text:'飛鳥時代につくられた、世界最古の木造建築として世界文化遺産に登録されている寺院を何といいますか？',
     answer:'法隆寺',
     hint:'奈良県にある、聖徳太子ゆかりの寺院',
     explanation:'法隆寺（ほうりゅうじ）は奈良県斑鳩町（いかるがちょう）にある寺院で、聖徳太子が建立したとされています。世界最古の木造建築物として知られており、1993年に世界文化遺産に登録されました。', exp:10 },
@@ -687,6 +687,18 @@ const ALL_QUESTIONS = [
   },
 ];
 
+// 前の問題の答えが次の問題文に出てくる問題などは、まとめて決まった順番で出す（まとまり同士・その他はランダム）
+const ORDER_GROUPS = [[1, 2], [3, 7], [4, 5], [11, 12, 13, 14], [16, 17, 8, 9], [24, 25], [27, 35], [33, 34, 36]];
+function orderQuestions(list){
+  const byId={}; list.forEach(q=>byId[q.id]=q);
+  const used=new Set(); const units=[];
+  ORDER_GROUPS.forEach(g=>{const u=g.map(id=>byId[id]).filter(Boolean); u.forEach(q=>used.add(q.id)); if(u.length) units.push(u);});
+  list.forEach(q=>{ if(!used.has(q.id)) units.push([q]); });
+  for(let i=units.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [units[i],units[j]]=[units[j],units[i]];}
+  return units.flat();
+}
+
+
 
 let exp=0, currentLevel=1, earnedTitles=[];
 let questions=[], currentIndex=0, correctCount=0, wrongCount=0, answered=false, results=[];
@@ -744,7 +756,7 @@ function closeTitleOverlay(){
 
 function startQuiz(questionSet){
   const isReview=!!questionSet;
-  questions=questionSet||[...ALL_QUESTIONS].sort(()=>Math.random()-0.5);
+  questions=questionSet||orderQuestions(ALL_QUESTIONS);
   currentIndex=0; correctCount=0; wrongCount=0; results=[]; answered=false; exp=0;
   if(!isReview) earnedTitles=[];
   document.getElementById('intro-screen').style.display='none';
